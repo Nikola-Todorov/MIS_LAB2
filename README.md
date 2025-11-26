@@ -1,16 +1,14 @@
-# meal_app
+<img width="625" height="971" alt="image" src="https://github.com/user-attachments/assets/87bd0fb7-a0ef-4a38-ba67-86c7771b7367" />
 
-A new Flutter project.
+<img width="623" height="971" alt="image" src="https://github.com/user-attachments/assets/485257e7-7a39-4540-836a-b03dd46b3f53" />
 
-## Getting Started
+<img width="625" height="972" alt="image" src="https://github.com/user-attachments/assets/d6449ff7-291a-439b-bbad-2b9090ffd90a" />
 
-This project is a starting point for a Flutter application.
+<img width="623" height="961" alt="image" src="https://github.com/user-attachments/assets/e48a5c80-905d-491e-a280-441b7abddf97" />
 
-A few resources to get you started if this is your first Flutter project:
+<img width="610" height="593" alt="image" src="https://github.com/user-attachments/assets/62b2b513-079e-49d2-b676-8c78071b6ed6" />
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+<img width="620" height="955" alt="image" src="https://github.com/user-attachments/assets/087161cf-f8b7-4b39-adc1-cfde0b524b24" />
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+
+
