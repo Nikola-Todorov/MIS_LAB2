@@ -1,12 +1,16 @@
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/firebase_service.dart';
 import 'meals_screen.dart';
 import 'meal_detail_screen.dart';
+import './favorites_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({super.key});
+  final String userId;
+  const CategoriesScreen({super.key, required this.userId});
 
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
@@ -14,6 +18,7 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
   final ApiService _apiService = ApiService();
+  final FirebaseService _firebaseService = FirebaseService();
   List<Category> _categories = [];
   List<Category> _filteredCategories = [];
   bool _isLoading = true;
@@ -24,6 +29,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     super.initState();
     _loadCategories();
   }
+
 
   Future<void> _loadCategories() async {
     try {
@@ -52,8 +58,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         _filteredCategories = _categories;
       } else {
         _filteredCategories = _categories
-            .where(
-                (cat) => cat.name.toLowerCase().contains(query.toLowerCase()))
+            .where((cat) => cat.name.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -66,7 +71,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => MealDetailScreen(mealId: meal.id),
+            builder: (context) => MealDetailScreen(
+              mealId: meal.id,
+              userId: widget.userId,
+            ),
           ),
         );
       }
@@ -86,6 +94,18 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         title: const Text('Категории'),
         backgroundColor: Colors.orange,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FavoritesScreen(userId: widget.userId),
+                ),
+              );
+            },
+            tooltip: 'Омилени',
+          ),
           IconButton(
             icon: const Icon(Icons.casino),
             onPressed: _showRandomMeal,
@@ -114,27 +134,29 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredCategories.isEmpty
-                    ? const Center(child: Text('Нема пронајдено категории'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredCategories.length,
-                        itemBuilder: (context, index) {
-                          final category = _filteredCategories[index];
-                          return _CategoryCard(
-                            category: category,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => MealsScreen(
-                                    category: category.name,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
+                ? const Center(child: Text('Нема пронајдено категории'))
+                : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _filteredCategories.length,
+              itemBuilder: (context, index) {
+                final category = _filteredCategories[index];
+                return _CategoryCard(
+                  category: category,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MealsScreen(
+                          category: category.name,
+                          // CRITICAL FIX: Use the injected widget.userId
+                          userId: widget.userId,
+                        ),
                       ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -161,8 +183,7 @@ class _CategoryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               child: CachedNetworkImage(
                 imageUrl: category.thumbnail,
                 height: 200,

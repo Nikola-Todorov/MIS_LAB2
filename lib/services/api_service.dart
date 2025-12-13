@@ -5,7 +5,6 @@ import '../models/models.dart';
 class ApiService {
   static const String baseUrl = 'https://www.themealdb.com/api/json/v1/1';
 
-  // Fetch all categories
   Future<List<Category>> fetchCategories() async {
     final response = await http.get(Uri.parse('$baseUrl/categories.php'));
 
@@ -20,7 +19,6 @@ class ApiService {
     }
   }
 
-  // Fetch meals by category
   Future<List<Meal>> fetchMealsByCategory(String category) async {
     final response = await http.get(
         Uri.parse('$baseUrl/filter.php?c=$category')
@@ -38,7 +36,6 @@ class ApiService {
     }
   }
 
-  // Search meals
   Future<List<Meal>> searchMeals(String query) async {
     final response = await http.get(
         Uri.parse('$baseUrl/search.php?s=$query')
@@ -56,7 +53,6 @@ class ApiService {
     }
   }
 
-  // Fetch meal details
   Future<MealDetail> fetchMealDetail(String id) async {
     final response = await http.get(
         Uri.parse('$baseUrl/lookup.php?i=$id')
@@ -73,7 +69,6 @@ class ApiService {
     }
   }
 
-  // Fetch random meal
   Future<MealDetail> fetchRandomMeal() async {
     final response = await http.get(
         Uri.parse('$baseUrl/random.php')

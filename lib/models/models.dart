@@ -41,7 +41,6 @@ class Meal {
   }
 }
 
-// Detailed Meal Model
 class MealDetail {
   final String id;
   final String name;
@@ -85,6 +84,7 @@ class MealDetail {
     );
   }
 }
+
 
 class Ingredient {
   final String name;

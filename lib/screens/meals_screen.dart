@@ -6,8 +6,13 @@ import 'meal_detail_screen.dart';
 
 class MealsScreen extends StatefulWidget {
   final String category;
+  final String userId;
 
-  const MealsScreen({super.key, required this.category});
+  const MealsScreen({
+    super.key,
+    required this.category,
+    required this.userId,
+  });
 
   @override
   State<MealsScreen> createState() => _MealsScreenState();
@@ -68,7 +73,6 @@ class _MealsScreenState extends State<MealsScreen> {
 
     try {
       final searchResults = await _apiService.searchMeals(query);
-
       final categoryMeals = searchResults.where((meal) {
         return _meals.any((m) => m.id == meal.id);
       }).toList();
@@ -108,12 +112,12 @@ class _MealsScreenState extends State<MealsScreen> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _searchMeals('');
-                        },
-                      )
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _searchMeals('');
+                  },
+                )
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -127,34 +131,33 @@ class _MealsScreenState extends State<MealsScreen> {
             child: _isLoading || _isSearching
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredMeals.isEmpty
-                    ? const Center(child: Text('Нема пронајдено јадења'))
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 0.75,
+                ? const Center(child: Text('Нема пронајдено јадења'))
+                : GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: _filteredMeals.length,
+              itemBuilder: (context, index) {
+                final meal = _filteredMeals[index];
+                return _MealCard(
+                  meal: meal,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MealDetailScreen(
+                          mealId: meal.id, userId: 'default_user',
                         ),
-                        itemCount: _filteredMeals.length,
-                        itemBuilder: (context, index) {
-                          final meal = _filteredMeals[index];
-                          return _MealCard(
-                            meal: meal,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => MealDetailScreen(
-                                    mealId: meal.id,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
                       ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -181,8 +184,7 @@ class _MealCard extends StatelessWidget {
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 child: CachedNetworkImage(
                   imageUrl: meal.thumbnail,
                   width: double.infinity,

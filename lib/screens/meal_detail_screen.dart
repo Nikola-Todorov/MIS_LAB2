@@ -1,13 +1,20 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/firebase_service.dart';
 
 class MealDetailScreen extends StatefulWidget {
   final String mealId;
+  final String userId;
 
-  const MealDetailScreen({super.key, required this.mealId});
+  const MealDetailScreen({
+    super.key,
+    required this.mealId,
+    required this.userId,
+  });
 
   @override
   State<MealDetailScreen> createState() => _MealDetailScreenState();
@@ -15,31 +22,95 @@ class MealDetailScreen extends StatefulWidget {
 
 class _MealDetailScreenState extends State<MealDetailScreen> {
   final ApiService _apiService = ApiService();
+  final FirebaseService _firebaseService = FirebaseService();
+
   MealDetail? _mealDetail;
   bool _isLoading = true;
+  bool _isFavorite = false;
 
   @override
   void initState() {
     super.initState();
     _loadMealDetail();
+    _checkFavoriteStatus();
   }
+
+  Future<void> _checkFavoriteStatus() async {
+    final isFav = await _firebaseService.isFavorite(
+      widget.userId,
+      widget.mealId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isFavorite = isFav;
+    });
+  }
+
+  Future<String> getUserId() async {
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser == null) {
+      final userCredential = await auth.signInAnonymously();
+      return userCredential.user!.uid;
+    }
+    return auth.currentUser!.uid;
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_mealDetail == null) return;
+
+    final userId = await getUserId();
+
+    if (_isFavorite) {
+      await _firebaseService.removeFavorite(userId, widget.mealId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Отстрането од омилени')),
+        );
+      }
+    } else {
+      await _firebaseService.addFavorite(userId, {
+        'id': _mealDetail!.id,
+        'name': _mealDetail!.name,
+        'thumbnail': _mealDetail!.thumbnail,
+        'category': _mealDetail!.category,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Додадено во омилени')),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isFavorite = !_isFavorite;
+      });
+    }
+  }
+
 
   Future<void> _loadMealDetail() async {
     try {
       final detail = await _apiService.fetchMealDetail(widget.mealId);
+
+      if (!mounted) return;
+
       setState(() {
         _mealDetail = detail;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
@@ -62,110 +133,123 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _mealDetail == null
-          ? const Center(child: Text('Failed to load meal details'))
-          : CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 300,
-            pinned: true,
-            backgroundColor: Colors.orange,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                _mealDetail!.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(0, 1),
-                      blurRadius: 3.0,
-                      color: Colors.black45,
-                    ),
-                  ],
-                ),
-              ),
-              background: CachedNetworkImage(
-                imageUrl: _mealDetail!.thumbnail,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                errorWidget: (context, url, error) =>
-                const Icon(Icons.error),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _InfoChip(
-                        icon: Icons.category,
-                        label: _mealDetail!.category,
-                      ),
-                      const SizedBox(width: 8),
-                      _InfoChip(
-                        icon: Icons.public,
-                        label: _mealDetail!.area,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Состојки',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ..._mealDetail!.ingredients.map((ingredient) =>
-                      _IngredientItem(ingredient: ingredient)),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Инструкции',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _mealDetail!.instructions,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  if (_mealDetail!.youtubeUrl != null)
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _launchYouTube(
-                            _mealDetail!.youtubeUrl!),
-                        icon: const Icon(Icons.play_circle_filled),
-                        label: const Text('Гледај на YouTube'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+              ? const Center(child: Text('Failed to load meal details'))
+              : CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      expandedHeight: 300,
+                      pinned: true,
+                      backgroundColor: Colors.orange,
+                      actions: [
+                        IconButton(
+                          icon: Icon(
+                            _isFavorite
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: _isFavorite ? Colors.red : Colors.white,
                           ),
+                          onPressed: _toggleFavorite,
+                        ),
+                      ],
+                      flexibleSpace: FlexibleSpaceBar(
+                        title: Text(
+                          _mealDetail!.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(0, 1),
+                                blurRadius: 3.0,
+                                color: Colors.black45,
+                              ),
+                            ],
+                          ),
+                        ),
+                        background: CachedNetworkImage(
+                          imageUrl: _mealDetail!.thumbnail,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) =>
+                              const Center(child: CircularProgressIndicator()),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.error),
                         ),
                       ),
                     ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _InfoChip(
+                                  icon: Icons.category,
+                                  label: _mealDetail!.category,
+                                ),
+                                const SizedBox(width: 8),
+                                _InfoChip(
+                                  icon: Icons.public,
+                                  label: _mealDetail!.area,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Состојки',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ..._mealDetail!.ingredients.map(
+                              (ingredient) => _IngredientItem(
+                                ingredient: ingredient,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Инструкции',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _mealDetail!.instructions,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            if (_mealDetail!.youtubeUrl != null)
+                              Center(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _launchYouTube(
+                                    _mealDetail!.youtubeUrl!,
+                                  ),
+                                  icon: const Icon(Icons.play_circle_filled),
+                                  label: const Text('Гледај на YouTube'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 }
